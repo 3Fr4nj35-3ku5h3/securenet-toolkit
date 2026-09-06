@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="SecureNet Console — authorized network assessment: ports, SSL/TLS, HTTP security headers, DNS." />
+  <title>SecureNet Console · Network Assessment</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:#0a0e16; --panel:#111822; --panel2:#171f2c; --line:rgba(255,255,255,.08);
+      --text:#e8edf5; --muted:#8b98a8; --cyan:#3dd6c6; --blue:#5b9fd4;
+      --amber:#e6b84d; --red:#e85d5d; --green:#4caf82;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:"IBM Plex Sans",system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.45;min-height:100vh}
+    .shell{max-width:1100px;margin:0 auto;padding:0 1rem 2.5rem}
+    .topbar{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;padding:.9rem 0;border-bottom:1px solid var(--line);margin-bottom:1.1rem;position:sticky;top:0;z-index:20;background:rgba(10,14,22,.92);backdrop-filter:blur(10px)}
+    .brand{display:flex;align-items:center;gap:.75rem}
+    .logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#122a3a,#0d1f2e);border:1px solid rgba(61,214,198,.4);display:grid;place-items:center;font-family:"IBM Plex Mono",monospace;font-weight:700;font-size:11px;color:var(--cyan)}
+    .brand h1{font-size:1.05rem;font-weight:600}.brand h1 span{color:var(--muted);font-weight:500}
+    .brand .tag{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-top:1px}
+    .pill{display:inline-flex;align-items:center;gap:.35rem;font-size:11px;font-weight:500;padding:.3rem .55rem;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--muted);font-family:"IBM Plex Mono",monospace}
+    .pill .dot{width:6px;height:6px;border-radius:50%;background:var(--muted)}
+    .pill.ok{color:var(--green);border-color:rgba(76,175,130,.35)}.pill.ok .dot{background:var(--green)}
+    .pill.bad{color:var(--red);border-color:rgba(232,93,93,.35)}.pill.bad .dot{background:var(--red)}
+    .hero{display:grid;grid-template-columns:1.3fr 1fr;gap:1rem;margin-bottom:1rem}
+    @media(max-width:800px){.hero{grid-template-columns:1fr}}
+    .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:1.1rem 1.15rem;margin-bottom:1rem}
+    .panel h2{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.65rem}
+    .hero h3{font-size:1.2rem;font-weight:600;letter-spacing:-.02em;margin-bottom:.4rem}
+    .hero p{color:var(--muted);font-size:13px}
+    .hero ul{margin:.7rem 0 0 1.1rem;color:var(--muted);font-size:13px}
+    .hero li{margin-bottom:.25rem}
+    .hero strong{color:var(--text)}
+    .tabs{display:flex;gap:.35rem;flex-wrap:wrap;margin-bottom:1rem}
+    .tab{font-family:inherit;font-size:12px;font-weight:600;padding:.45rem .85rem;border-radius:7px;border:1px solid var(--line);background:var(--panel);color:var(--muted);cursor:pointer}
+    .tab.active{color:var(--cyan);border-color:rgba(61,214,198,.4);background:rgba(61,214,198,.1)}
+    label.field{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:.35rem;font-weight:600}
+    input[type=text],select{width:100%;padding:.55rem .7rem;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-family:inherit;font-size:13px;margin-bottom:.75rem}
+    input[type=text]:focus,select:focus{outline:none;border-color:rgba(61,214,198,.45)}
+    .auth{display:flex;align-items:flex-start;gap:.5rem;margin:.5rem 0 1rem;font-size:12px;color:var(--muted)}
+    .auth input{margin-top:.2rem}
+    .btn{font-family:inherit;font-size:12px;font-weight:600;padding:.55rem 1rem;border-radius:8px;cursor:pointer;border:1px solid var(--line);background:var(--panel2);color:var(--text)}
+    .btn:disabled{opacity:.4;cursor:not-allowed}
+    .btn-primary{background:rgba(61,214,198,.12);border-color:rgba(61,214,198,.4);color:var(--cyan)}
+    .btn-primary:hover:not(:disabled){background:rgba(61,214,198,.2)}
+    .result{margin-top:1rem}
+    .empty{color:var(--muted);text-align:center;padding:1.5rem;font-size:13px}
+    .grade{font-family:"IBM Plex Mono",monospace;font-size:2rem;font-weight:700}
+    .score-bar{height:8px;background:var(--bg);border-radius:99px;overflow:hidden;margin:.5rem 0}
+    .score-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--blue))}
+    table{width:100%;border-collapse:collapse;font-size:12px;margin-top:.5rem}
+    th,td{padding:.4rem .5rem;border-bottom:1px solid var(--line);text-align:left}
+    th{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.05em}
+    .chip{display:inline-block;font-size:11px;font-family:"IBM Plex Mono",monospace;padding:.2rem .45rem;border-radius:5px;border:1px solid var(--line);color:var(--muted);margin:.15rem}
+    .chip.ok{color:var(--green);border-color:rgba(76,175,130,.35)}
+    .chip.warn{color:var(--amber);border-color:rgba(230,184,77,.35)}
+    .chip.bad{color:var(--red);border-color:rgba(232,93,93,.35)}
+    .notice{padding:.75rem .9rem;border-radius:8px;border:1px solid var(--line);background:var(--panel);font-size:12px;color:var(--muted);margin-top:.5rem}
+    .notice strong{color:var(--text)}
+    footer{margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--line);font-size:11px;color:var(--muted);display:flex;flex-wrap:wrap;justify-content:space-between;gap:.5rem}
+    footer a{color:var(--cyan);text-decoration:none}
+    .hidden{display:none}
+    pre.json{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:.75rem;overflow:auto;font-family:"IBM Plex Mono",monospace;font-size:11px;max-height:320px}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">SN</div>
+        <div>
+          <h1>SecureNet <span>Console</span></h1>
+          <div class="tag">Authorized network assessment · v2.0</div>
+        </div>
+      </div>
+      <span class="pill" id="health"><span class="dot"></span> checking</span>
+    </header>
+
+    <section class="hero">
+      <div class="panel">
+        <h2>Product</h2>
+        <h3>Assessment helpers for authorized environments</h3>
+        <p>
+          SecureNet Console wraps production-minded checks — TCP ports, TLS certificates,
+          HTTP security headers, and DNS — behind a clear authorization gate.
+          Built for analysts and engineers who need fast, explainable signals.
+        </p>
+        <ul>
+          <li><strong>Port scan</strong> — common / limited ranges, optional banners</li>
+          <li><strong>SSL/TLS</strong> — cert, expiry, version, advisory grade</li>
+          <li><strong>HTTP headers</strong> — scored security header posture</li>
+          <li><strong>DNS</strong> — core records + light subdomain resolution</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h2>Public console policy</h2>
+        <p style="font-size:13px;color:var(--muted)">
+          Private IPs, localhost, and cloud metadata hosts are blocked.
+          Port scans are capped. Rate limits apply. You must confirm authorization before every run.
+        </p>
+        <p style="font-size:12px;color:var(--muted);margin-top:.75rem">
+          CLI modules remain available in the repo for lab / owned networks under the same legal rules.
+        </p>
+      </div>
+    </section>
+
+    <div class="tabs">
+      <button type="button" class="tab active" data-tab="ports">Ports</button>
+      <button type="button" class="tab" data-tab="ssl">SSL/TLS</button>
+      <button type="button" class="tab" data-tab="http">HTTP headers</button>
+      <button type="button" class="tab" data-tab="dns">DNS</button>
+    </div>
+
+    <!-- PORTS -->
+    <div class="panel" id="tab-ports">
+      <h2>TCP port scanner</h2>
+      <label class="field">Target hostname</label>
+      <input type="text" id="portTarget" placeholder="example.com" />
+      <label class="field">Port set</label>
+      <select id="portRange">
+        <option value="common">Common ports (recommended)</option>
+        <option value="80-100">80–100</option>
+        <option value="443,80,22,8080">443, 80, 22, 8080</option>
+      </select>
+      <label class="auth"><input type="checkbox" id="portAuth" /> I confirm I am authorized to test this target.</label>
+      <button type="button" class="btn btn-primary" id="portBtn">Run port scan</button>
+      <div class="result" id="portResult"><div class="empty">No scan yet.</div></div>
+    </div>
+
+    <!-- SSL -->
+    <div class="panel hidden" id="tab-ssl">
+      <h2>SSL/TLS analyzer</h2>
+      <label class="field">Hostname</label>
+      <input type="text" id="sslTarget" placeholder="example.com" />
+      <label class="auth"><input type="checkbox" id="sslAuth" /> I confirm I am authorized to test this target.</label>
+      <button type="button" class="btn btn-primary" id="sslBtn">Analyze TLS</button>
+      <div class="result" id="sslResult"><div class="empty">No analysis yet.</div></div>
+    </div>
+
+    <!-- HTTP -->
+    <div class="panel hidden" id="tab-http">
+      <h2>HTTP security headers</h2>
+      <label class="field">URL</label>
+      <input type="text" id="httpUrl" placeholder="https://example.com" />
+      <label class="auth"><input type="checkbox" id="httpAuth" /> I confirm I am authorized to test this target.</label>
+      <button type="button" class="btn btn-primary" id="httpBtn">Score headers</button>
+      <div class="result" id="httpResult"><div class="empty">No analysis yet.</div></div>
+    </div>
+
+    <!-- DNS -->
+    <div class="panel hidden" id="tab-dns">
+      <h2>DNS enumeration</h2>
+      <label class="field">Domain</label>
+      <input type="text" id="dnsDomain" placeholder="example.com" />
+      <label class="auth"><input type="checkbox" id="dnsAuth" /> I confirm I am authorized to test this domain.</label>
+      <button type="button" class="btn btn-primary" id="dnsBtn">Enumerate DNS</button>
+      <div class="result" id="dnsResult"><div class="empty">No enumeration yet.</div></div>
+    </div>
+
+    <div class="notice">
+      <strong>Legal boundary.</strong>
+      Only test systems you own or have written permission to assess.
+      Unauthorized access to computer systems is illegal. SecureNet does not exploit vulnerabilities or auto-attack hosts.
+    </div>
+
+    <footer>
+      <span>SecureNet Console v2.0 · Francis Ngumi Kuria</span>
+      <span>
+        <a href="https://github.com/3Fr4nj35-3ku5h3/securenet-toolkit" target="_blank" rel="noopener">Source</a>
+        ·
+        <a href="https://3fr4nj35-3ku5h3.github.io/francis-kuria.github.io/" target="_blank" rel="noopener">Portfolio</a>
+      </span>
+    </footer>
+  </div>
+<script>
+const $ = id => document.getElementById(id);
+
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    ['ports','ssl','http','dns'].forEach(n => {
+      $('tab-'+n).classList.toggle('hidden', btn.dataset.tab !== n);
+    });
+  });
+});
+
+async function init() {
+  try {
+    const h = await fetch('/api/health').then(r => r.json());
+    $('health').className = 'pill ok';
+    $('health').innerHTML = '<span class="dot"></span> online · ' + (h.version||'');
+  } catch {
+    $('health').className = 'pill bad';
+    $('health').innerHTML = '<span class="dot"></span> offline';
+  }
+}
+
+function showError(el, err) {
+  el.innerHTML = `<div class="empty" style="color:var(--red)">${err}</div>`;
+}
+
+$('portBtn').addEventListener('click', async () => {
+  const el = $('portResult');
+  el.innerHTML = '<div class="empty">Scanning…</div>';
+  try {
+    const res = await fetch('/api/scan/ports', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        target: $('portTarget').value,
+        port_range: $('portRange').value,
+        detect_services: true,
+        authorized: $('portAuth').checked
+      })
+    }).then(async r => {
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.detail || r.statusText);
+      return j;
+    });
+    const rows = (res.open_ports||[]).map(p =>
+      `<tr><td>${p.port}</td><td>${p.service||''}</td><td>${(p.banner||'').slice(0,80)}</td></tr>`
+    ).join('') || '<tr><td colspan="3">No open ports in set</td></tr>';
+    el.innerHTML = `
+      <p style="font-size:12px;color:var(--muted)">Target <strong style="color:var(--text)">${res.target}</strong> · scanned ${res.scanned} · open ${res.open_count}</p>
+      <table><thead><tr><th>Port</th><th>Service</th><th>Banner</th></tr></thead><tbody>${rows}</tbody></table>`;
+  } catch (e) { showError(el, e.message); }
+});
+
+$('sslBtn').addEventListener('click', async () => {
+  const el = $('sslResult');
+  el.innerHTML = '<div class="empty">Analyzing…</div>';
+  try {
+    const res = await fetch('/api/scan/ssl', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ target: $('sslTarget').value, authorized: $('sslAuth').checked })
+    }).then(async r => {
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.detail || r.statusText);
+      return j;
+    });
+    if (res.error) { showError(el, res.error); return; }
+    el.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap">
+        <div>
+          <div class="grade">${res.grade||'—'}</div>
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Advisory grade</div>
+        </div>
+        <div style="font-size:12px;color:var(--muted);text-align:right">
+          <div><strong style="color:var(--text)">${res.subject_cn||res.target}</strong></div>
+          TLS ${res.tls_version||'—'} · ${res.cipher||'—'}<br/>
+          Issuer ${res.issuer||'—'}<br/>
+          Expiry ${res.not_after||'—'} (${res.days_until_expiry??'—'} days)
+        </div>
+      </div>
+      ${res.verification_error ? `<p class="chip warn" style="margin-top:.75rem">Verification: ${res.verification_error}</p>` : '<p class="chip ok" style="margin-top:.75rem">Chain verification OK</p>'}`;
+  } catch (e) { showError(el, e.message); }
+});
+
+$('httpBtn').addEventListener('click', async () => {
+  const el = $('httpResult');
+  el.innerHTML = '<div class="empty">Scoring…</div>';
+  try {
+    const res = await fetch('/api/scan/http', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ url: $('httpUrl').value, authorized: $('httpAuth').checked })
+    }).then(async r => {
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.detail || r.statusText);
+      return j;
+    });
+    if (res.error) { showError(el, res.error); return; }
+    const missing = (res.missing||[]).map(m => `<span class="chip warn">${m.header}</span>`).join('') || '<span class="chip ok">none critical missing</span>';
+    const present = (res.present||[]).map(m => `<span class="chip ok">${m.header}</span>`).join('');
+    el.innerHTML = `
+      <p style="font-size:12px;color:var(--muted)">${res.url} · HTTP ${res.status||'—'} · server ${res.server||'—'}</p>
+      <div style="font-family:IBM Plex Mono,monospace;font-size:1.5rem;font-weight:600;color:var(--cyan)">${res.score}/100</div>
+      <div class="score-bar"><div class="score-fill" style="width:${res.score}%"></div></div>
+      <p style="font-size:11px;color:var(--muted);margin-top:.5rem">Present</p>${present}
+      <p style="font-size:11px;color:var(--muted);margin-top:.5rem">Missing</p>${missing}`;
+  } catch (e) { showError(el, e.message); }
+});
+
+$('dnsBtn').addEventListener('click', async () => {
+  const el = $('dnsResult');
+  el.innerHTML = '<div class="empty">Resolving…</div>';
+  try {
+    const res = await fetch('/api/scan/dns', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ domain: $('dnsDomain').value, authorized: $('dnsAuth').checked })
+    }).then(async r => {
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.detail || r.statusText);
+      return j;
+    });
+    const rec = res.records || {};
+    const recHtml = Object.entries(rec).map(([k,v]) =>
+      `<tr><td>${k}</td><td>${(v||[]).join('<br>')||'—'}</td></tr>`
+    ).join('');
+    const subs = (res.subdomains||[]).map(s =>
+      `<tr><td>${s.host}</td><td>${(s.ips||[]).join(', ')}</td></tr>`
+    ).join('') || '<tr><td colspan="2">No subdomains from wordlist</td></tr>';
+    el.innerHTML = `
+      <p style="font-size:12px;color:var(--muted)">Domain <strong style="color:var(--text)">${res.domain}</strong> · ${res.subdomain_count||0} subdomains</p>
+      <table><thead><tr><th>Type</th><th>Records</th></tr></thead><tbody>${recHtml}</tbody></table>
+      <p style="font-size:11px;color:var(--muted);margin-top:.75rem">Subdomains</p>
+      <table><thead><tr><th>Host</th><th>IPs</th></tr></thead><tbody>${subs}</tbody></table>`;
+  } catch (e) { showError(el, e.message); }
+});
+
+init();
+</script>
+</body>
+</html>
